@@ -1,0 +1,11 @@
+course_id,name,lecturer_id,n_students,capacity_needed,preferred_period
+1,Math Analysis,1,35,35,P2
+2,Linear Algebra,2,28,28,P2
+3,Programming 101,3,40,40,P1
+4,Data Structures,4,22,22,P3
+5,AI Fundamentals,5,30,30,P2
+6,Databases,3,18,18,P4
+7,Networks,6,25,25,P3
+8,OS Concepts,7,20,20,P3
+9,Statistics,1,15,15,P3
+10,ML Basics,8,35,35,P2

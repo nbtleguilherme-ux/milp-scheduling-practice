@@ -1,0 +1,6 @@
+room_id,name,capacity,cost_per_slot
+1,Hall A,45,5
+2,Hall B,40,4
+3,Room C,30,3
+4,Room D,25,2
+5,Room E,20,1
