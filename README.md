@@ -21,7 +21,6 @@ By the end of this session you will be able to:
 
 ```
 milp_scheduling_practice.ipynb   ← your working notebook (complete the TODOs)
-milp_scheduling_solution.ipynb   ← full reference solution (solution branch only)
 eda_teaching_dataset.ipynb       ← exploratory analysis of the dataset
 data_teaching/                   ← dataset (see below)
 ```
