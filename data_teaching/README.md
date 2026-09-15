@@ -1,121 +1,121 @@
-# Course Scheduling — Teaching Dataset
+# Lập Lịch Khóa Học — Tập Dữ Liệu Giảng Dạy
 
-A small, self-contained instance designed for a first MILP course-scheduling practice.
+Một bài toán lập lịch nhỏ, khép kín được thiết kế cho buổi thực hành MILP lập lịch khóa học đầu tiên.
 
-## Problem statement
+## Phát Biểu Bài Toán
 
-Assign each course exactly **one timeslot** and **one room** so that all hard constraints
-are satisfied and the total scheduling cost is minimised.
+Gán mỗi khóa học đúng **một khung giờ** và **một phòng học** sao cho tất cả các ràng buộc cứng
+được thỏa mãn và tổng chi phí lập lịch được tối thiểu hóa.
 
 ---
 
-## Files
+## Các Tệp Dữ Liệu
 
-| File | Rows | Key columns |
+| Tệp | Số dòng | Các cột chính |
 |------|------|-------------|
 | `courses.csv` | 10 | `course_id, name, lecturer_id, n_students, capacity_needed, preferred_period` |
 | `rooms.csv` | 5 | `room_id, name, capacity, cost_per_slot` |
-| `timeslots.csv` | 15 | `timeslot_id, day, period, start_time, cost` (3 days × 5 periods) |
+| `timeslots.csv` | 15 | `timeslot_id, day, period, start_time, cost` (3 ngày × 5 tiết) |
 | `lecturers.csv` | 8 | `lecturer_id, name` |
 | `course_conflicts.csv` | 8 | `course_a, course_b, shared_students` |
-| `course_period_options.csv` | 6 | `course_id, period` (allowed periods for restricted courses only) |
+| `course_period_options.csv` | 6 | `course_id, period` (chỉ các tiết được phép cho khóa học bị hạn chế) |
 
 ---
 
-## Sets & parameters
+## Tập Hợp & Tham Số
 
-| Symbol | Meaning | Source |
+| Ký hiệu | Ý nghĩa | Nguồn |
 |--------|---------|--------|
-| **C** | set of courses | `courses.csv` |
-| **R** | set of rooms | `rooms.csv` |
-| **T** | set of timeslots | `timeslots.csv` |
-| `cap[r]` | capacity of room *r* | `rooms.capacity` |
-| `size[c]` | students needing a seat | `courses.capacity_needed` |
-| `lec[c]` | lecturer of course *c* | `courses.lecturer_id` |
-| `rc[r]` | room cost per slot | `rooms.cost_per_slot` |
-| `tc[t]` | timeslot cost | `timeslots.cost` |
-| `E` | set of conflicting course pairs (student overlap) | `course_conflicts.csv` |
-| `A[c]` | allowed timeslot IDs for course *c* (unrestricted if absent) | `course_period_options.csv` |
+| **C** | tập hợp các khóa học | `courses.csv` |
+| **R** | tập hợp các phòng học | `rooms.csv` |
+| **T** | tập hợp các khung giờ | `timeslots.csv` |
+| `cap[r]` | sức chứa của phòng *r* | `rooms.capacity` |
+| `size[c]` | số sinh viên cần chỗ ngồi | `courses.capacity_needed` |
+| `lec[c]` | giảng viên của khóa học *c* | `courses.lecturer_id` |
+| `rc[r]` | chi phí phòng mỗi tiết | `rooms.cost_per_slot` |
+| `tc[t]` | chi phí khung giờ | `timeslots.cost` |
+| `E` | tập hợp các cặp khóa học xung đột (có sinh viên chung) | `course_conflicts.csv` |
+| `A[c]` | các ID khung giờ được phép cho khóa học *c* (không hạn chế nếu vắng mặt) | `course_period_options.csv` |
 
 ---
 
-## Decision variable
+## Biến Quyết Định
 
 ```
-x[c, t, r] ∈ {0, 1}     for all c ∈ C, t ∈ T, r ∈ R
+x[c, t, r] ∈ {0, 1}     cho tất cả c ∈ C, t ∈ T, r ∈ R
 
-x[c,t,r] = 1  iff course c is scheduled in timeslot t and room r
+x[c,t,r] = 1  khi và chỉ khi khóa học c được xếp vào khung giờ t và phòng r
 ```
 
-With |C|=10, |T|=15, |R|=5 this gives **750 binary variables** — small enough to
-inspect by hand and solve in seconds with any MILP solver.
+Với |C|=10, |T|=15, |R|=5 ta có **750 biến nhị phân** — nhỏ đủ để
+kiểm tra bằng tay và giải trong vài giây với bất kỳ bộ giải MILP nào.
 
 ---
 
-## Hard constraints
+## Ràng Buộc Cứng
 
-### C1 — Each course is assigned exactly once
+### C1 — Mỗi khóa học được phân công đúng một lần
 ```
 ∑_{t,r} x[c,t,r] = 1     ∀ c ∈ C
 ```
 
-### C2 — No two courses share the same (timeslot, room)
+### C2 — Không có hai khóa học nào dùng chung (khung giờ, phòng)
 ```
 ∑_c x[c,t,r] ≤ 1     ∀ t ∈ T, r ∈ R
 ```
 
-### C3 — Room capacity must not be exceeded
+### C3 — Sức chứa phòng không được vượt quá
 ```
-x[c,t,r] = 0     if cap[r] < size[c]
+x[c,t,r] = 0     nếu cap[r] < size[c]
 ```
-*(Equivalently: add this as a constraint or pre-filter feasible (c,r) pairs.)*
+*(Tương đương: thêm ràng buộc này hoặc lọc trước các cặp (c,r) khả thi.)*
 
-### C4 — Student conflicts: two courses sharing students cannot overlap
+### C4 — Xung đột sinh viên: hai khóa học có sinh viên chung không thể trùng giờ
 ```
 ∑_r x[c1,t,r] + ∑_r x[c2,t,r] ≤ 1     ∀ (c1,c2) ∈ E, ∀ t ∈ T
 ```
 
-### C5 — Lecturer conflict: a lecturer teaches at most one course per timeslot
+### C5 — Xung đột giảng viên: một giảng viên dạy tối đa một khóa học mỗi khung giờ
 ```
 ∑_r x[c1,t,r] + ∑_r x[c2,t,r] ≤ 1     ∀ t ∈ T,
-    ∀ c1 ≠ c2 such that lec[c1] = lec[c2]
+    ∀ c1 ≠ c2 sao cho lec[c1] = lec[c2]
 ```
 
-*Lecturers with two courses in this dataset:*
+*Các giảng viên dạy hai khóa học trong tập dữ liệu này:*
 - **Prof. Nguyen (id=1)**: Math Analysis (1) + Statistics (9)
 - **Prof. Le (id=3)**: Programming 101 (3) + Databases (6)
 
-### C6 — Period restrictions (optional hard constraint)
-Some courses may only use certain periods.
-`course_period_options.csv` lists the **allowed periods** for restricted courses:
+### C6 — Hạn chế tiết học (ràng buộc cứng tùy chọn)
+Một số khóa học chỉ được dùng một số tiết nhất định.
+`course_period_options.csv` liệt kê các **tiết được phép** cho các khóa học bị hạn chế:
 
-| Course | Allowed periods | Rationale |
+| Khóa học | Các tiết được phép | Lý do |
 |--------|----------------|-----------|
-| Databases (6) | P3, P4, P5 | Computer lab only available from 09:30 |
-| ML Basics (10) | P1, P2, P3 | Morning lecture slot only |
+| Databases (6) | P3, P4, P5 | Phòng máy tính chỉ có sẵn từ 09:30 |
+| ML Basics (10) | P1, P2, P3 | Chỉ dùng tiết giảng buổi sáng |
 
-Courses **not** listed in that file can use **any** period.
+Các khóa học **không** có trong tệp đó có thể dùng **bất kỳ** tiết nào.
 
 ```
-∑_r x[c,t,r] = 0     ∀ c with restrictions, ∀ t whose period ∉ A[c]
+∑_r x[c,t,r] = 0     ∀ c có hạn chế, ∀ t có period ∉ A[c]
 ```
 
 ---
 
-## Objective function
+## Hàm Mục Tiêu
 
-Minimise the total scheduling cost, where each assignment pays a **room cost** and
-a **timeslot cost**:
+Tối thiểu hóa tổng chi phí lập lịch, trong đó mỗi lần phân công phải trả **chi phí phòng** và
+**chi phí khung giờ**:
 
 ```
-Minimise  ∑_{c,t,r}  (rc[r] + tc[t]) × x[c,t,r]
+Tối thiểu hóa  ∑_{c,t,r}  (rc[r] + tc[t]) × x[c,t,r]
 ```
 
-### Cost structure
+### Cấu Trúc Chi Phí
 
-**Room costs** (`rc[r]`) reflect size — larger rooms cost more to open:
+**Chi phí phòng** (`rc[r]`) phản ánh kích thước — phòng lớn hơn tốn kém hơn:
 
-| Room | Capacity | Cost/slot |
+| Phòng | Sức chứa | Chi phí/tiết |
 |------|----------|-----------|
 | Hall A | 45 | 5 |
 | Hall B | 40 | 4 |
@@ -123,62 +123,62 @@ Minimise  ∑_{c,t,r}  (rc[r] + tc[t]) × x[c,t,r]
 | Room D | 25 | 2 |
 | Room E | 20 | 1 |
 
-**Timeslot costs** (`tc[t]`) reflect time-of-day preference:
+**Chi phí khung giờ** (`tc[t]`) phản ánh mức độ ưu tiên theo thời điểm trong ngày:
 
-| Period | Start | Cost | Interpretation |
+| Tiết | Giờ bắt đầu | Chi phí | Diễn giải |
 |--------|-------|------|----------------|
-| P1 | 07:30 | 2 | Too early |
-| P2 | 08:30 | 1 | Ideal |
-| P3 | 09:30 | 1 | Ideal |
-| P4 | 10:30 | 2 | Late morning |
-| P5 | 13:30 | 3 | Afternoon (heat / fatigue) |
+| P1 | 07:30 | 2 | Quá sớm |
+| P2 | 08:30 | 1 | Lý tưởng |
+| P3 | 09:30 | 1 | Lý tưởng |
+| P4 | 10:30 | 2 | Muộn buổi sáng |
+| P5 | 13:30 | 3 | Buổi chiều (nóng / mệt mỏi) |
 
-The cost structure creates a **natural tension**: a large course (many students) *must*
-use an expensive room (C3), while the optimizer tries to avoid wasting extra capacity
-and avoids high-cost time slots wherever constraints allow.
-
----
-
-## Extension exercise — soft preference penalty
-
-`courses.preferred_period` records each course's ideal period.  
-Add a soft penalty to the objective:
-
-```
-Minimise  ∑_{c,t,r} (rc[r] + tc[t]) × x[c,t,r]
-        + λ × ∑_{c,t,r} penalty[c,t] × x[c,t,r]
-
-where  penalty[c,t] = 1  if period(t) ≠ preferred_period[c]
-                    = 0  otherwise
-```
-
-Experiment with different values of λ to see how much the solver deviates from the
-hard-constraint optimal to respect preferences.
+Cấu trúc chi phí tạo ra một **mâu thuẫn tự nhiên**: khóa học lớn (nhiều sinh viên) *phải*
+dùng phòng đắt tiền (C3), trong khi bộ tối ưu hóa cố gắng tránh lãng phí sức chứa dư thừa
+và tránh các khung giờ có chi phí cao bất cứ khi nào ràng buộc cho phép.
 
 ---
 
-## Conflict graph (quick reference)
+## Bài Tập Mở Rộng — Hình Phạt Ưu Tiên Mềm
+
+`courses.preferred_period` ghi lại tiết lý tưởng của mỗi khóa học.  
+Thêm hình phạt mềm vào hàm mục tiêu:
 
 ```
-Student conflicts (C4):
-  1 — 2   (15 students)
-  1 — 9   (10 students)
-  2 — 5   (12 students)
-  3 — 4   (18 students)
-  3 — 6   (14 students)   ← also lecturer conflict (Prof. Le)
-  4 — 10  ( 8 students)
-  5 — 10  (20 students)
-  7 — 8   (16 students)
+Tối thiểu hóa  ∑_{c,t,r} (rc[r] + tc[t]) × x[c,t,r]
+             + λ × ∑_{c,t,r} penalty[c,t] × x[c,t,r]
 
-Lecturer conflicts (C5, not already in C4):
+trong đó  penalty[c,t] = 1  nếu period(t) ≠ preferred_period[c]
+                       = 0  ngược lại
+```
+
+Thử nghiệm với các giá trị λ khác nhau để xem bộ giải lệch khỏi
+nghiệm tối ưu ràng buộc cứng bao nhiêu để tôn trọng các ưu tiên.
+
+---
+
+## Đồ Thị Xung Đột (Tham Khảo Nhanh)
+
+```
+Xung đột sinh viên (C4):
+  1 — 2   (15 sinh viên)
+  1 — 9   (10 sinh viên)
+  2 — 5   (12 sinh viên)
+  3 — 4   (18 sinh viên)
+  3 — 6   (14 sinh viên)   ← cũng là xung đột giảng viên (Prof. Le)
+  4 — 10  ( 8 sinh viên)
+  5 — 10  (20 sinh viên)
+  7 — 8   (16 sinh viên)
+
+Xung đột giảng viên (C5, chưa có trong C4):
   1 — 9   (Prof. Nguyen)
 ```
 
 ---
 
-## Feasibility notes
+## Ghi Chú Về Tính Khả Thi
 
-- 10 courses, 15 timeslots, 5 rooms → 75 possible (timeslot, room) slots, far more than needed.
-- The binding constraints are capacity (courses 1, 3, 10 all need Hall A or B) and
-  the lecturer / student conflict graph.
-- The dataset is **guaranteed feasible** with all six constraints active.
+- 10 khóa học, 15 khung giờ, 5 phòng → 75 ô (khung giờ, phòng) khả dụng, nhiều hơn nhiều so với cần thiết.
+- Các ràng buộc ràng buộc nhất là sức chứa (các khóa học 1, 3, 10 đều cần Hall A hoặc B) và
+  đồ thị xung đột giảng viên/sinh viên.
+- Tập dữ liệu **được đảm bảo khả thi** khi cả sáu ràng buộc đều hoạt động.
