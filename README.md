@@ -1,53 +1,53 @@
-# Session 8 — MILP Course Scheduling
+# Buổi 8 — Lập Lịch Khóa Học với MILP
 
-Practice session on **Mixed-Integer Linear Programming (MILP)** applied to university course scheduling.  
-You will model and solve a scheduling problem from scratch using [Pyomo](http://www.pyomo.org/) and the HiGHS solver.
-
----
-
-## Objectives
-
-By the end of this session you will be able to:
-
-- Translate a real scheduling problem into decision variables, constraints, and an objective function
-- Implement a MILP model in Pyomo (`ConcreteModel`, `Var`, `Constraint`, `Objective`)
-- Use a rule-based constraint and a `ConstraintList` for irregular sets
-- Solve the model with the HiGHS solver and extract the solution
-- Extend a hard-constraint model with a soft preference penalty and analyse the trade-off
+Buổi thực hành về **Lập Trình Tuyến Tính Nguyên Hỗn Hợp (MILP)** ứng dụng vào lập lịch khóa học tại trường đại học.  
+Bạn sẽ mô hình hóa và giải một bài toán lập lịch từ đầu sử dụng [Pyomo](http://www.pyomo.org/) và bộ giải HiGHS.
 
 ---
 
-## Repository structure
+## Mục Tiêu
+
+Sau buổi học này bạn sẽ có khả năng:
+
+- Chuyển đổi một bài toán lập lịch thực tế thành biến quyết định, ràng buộc và hàm mục tiêu
+- Triển khai mô hình MILP trong Pyomo (`ConcreteModel`, `Var`, `Constraint`, `Objective`)
+- Sử dụng ràng buộc dạng quy tắc (rule-based) và `ConstraintList` cho các tập không đều
+- Giải mô hình bằng bộ giải HiGHS và trích xuất nghiệm
+- Mở rộng mô hình ràng buộc cứng bằng hình phạt ưu tiên mềm và phân tích sự đánh đổi
+
+---
+
+## Cấu Trúc Repository
 
 ```
-milp_scheduling_practice.ipynb   ← your working notebook (complete the TODOs)
-eda_teaching_dataset.ipynb       ← exploratory analysis of the dataset
-data_teaching/                   ← dataset (see below)
+milp_scheduling_practice.ipynb   ← notebook thực hành của bạn (hoàn thành các TODO)
+eda_teaching_dataset.ipynb       ← phân tích khám phá tập dữ liệu
+data_teaching/                   ← tập dữ liệu (xem bên dưới)
 ```
 
-> The **`main`** branch contains the practice notebook only.  
-> The **`solution`** branch adds the complete reference solution — shared at the end of the session.
+> Nhánh **`main`** chứa notebook thực hành.  
+> Nhánh **`solution`** bổ sung lời giải tham khảo đầy đủ — được chia sẻ vào cuối buổi học.
 
 ---
 
-## Dataset — `data_teaching/`
+## Tập Dữ Liệu — `data_teaching/`
 
-A small, self-contained scheduling instance: **10 courses**, **5 rooms**, **15 timeslots** (3 days × 5 periods).
+Một bài toán lập lịch nhỏ, khép kín: **10 khóa học**, **5 phòng**, **15 khung giờ** (3 ngày × 5 tiết).
 
-| File | Rows | Description |
+| Tệp | Số dòng | Mô tả |
 |------|------|-------------|
-| `courses.csv` | 10 | Course id, name, lecturer, number of students, capacity needed, preferred period |
-| `rooms.csv` | 5 | Room id, name, capacity, cost per slot |
-| `timeslots.csv` | 15 | Timeslot id, day (Mon/Tue/Wed), period (P1–P5), start time, cost |
-| `lecturers.csv` | 8 | Lecturer id, name |
-| `course_conflicts.csv` | 8 | Pairs of courses that share students (cannot overlap) |
-| `course_period_options.csv` | 6 | Allowed periods for restricted courses only |
+| `courses.csv` | 10 | Mã khóa học, tên, giảng viên, số sinh viên, sức chứa cần thiết, tiết ưu tiên |
+| `rooms.csv` | 5 | Mã phòng, tên, sức chứa, chi phí mỗi tiết |
+| `timeslots.csv` | 15 | Mã khung giờ, ngày (Mon/Tue/Wed), tiết (P1–P5), giờ bắt đầu, chi phí |
+| `lecturers.csv` | 8 | Mã giảng viên, tên |
+| `course_conflicts.csv` | 8 | Các cặp khóa học có chung sinh viên (không thể trùng giờ) |
+| `course_period_options.csv` | 6 | Các tiết được phép cho các khóa học bị hạn chế |
 
-### Cost structure
+### Cấu Trúc Chi Phí
 
-**Room costs** (larger room = higher cost):
+**Chi phí phòng** (phòng lớn hơn = chi phí cao hơn):
 
-| Room | Capacity | Cost/slot |
+| Phòng | Sức chứa | Chi phí/tiết |
 |------|----------|-----------|
 | Hall A | 45 | 5 |
 | Hall B | 40 | 4 |
@@ -55,59 +55,59 @@ A small, self-contained scheduling instance: **10 courses**, **5 rooms**, **15 t
 | Room D | 25 | 2 |
 | Room E | 20 | 1 |
 
-**Timeslot costs** (reflects time-of-day preference):
+**Chi phí khung giờ** (phản ánh mức độ ưu tiên theo thời điểm trong ngày):
 
-| Period | Start | Cost |
+| Tiết | Giờ bắt đầu | Chi phí |
 |--------|-------|------|
-| P1 | 07:30 | 2 — too early |
-| P2 | 08:30 | 1 — ideal |
-| P3 | 09:30 | 1 — ideal |
-| P4 | 10:30 | 2 — late morning |
-| P5 | 13:30 | 3 — afternoon |
+| P1 | 07:30 | 2 — quá sớm |
+| P2 | 08:30 | 1 — lý tưởng |
+| P3 | 09:30 | 1 — lý tưởng |
+| P4 | 10:30 | 2 — muộn buổi sáng |
+| P5 | 13:30 | 3 — buổi chiều |
 
 ---
 
-## Problem summary
+## Tóm Tắt Bài Toán
 
-Assign each course to exactly one (timeslot, room) pair to **minimise total cost**, subject to:
+Gán mỗi khóa học vào đúng một cặp (khung giờ, phòng) để **tối thiểu hóa tổng chi phí**, với các ràng buộc:
 
-| Constraint | Rule |
+| Ràng buộc | Quy tắc |
 |------------|------|
-| C1 — Assignment | Every course is scheduled exactly once |
-| C2 — Room conflict | At most one course per (timeslot, room) |
-| C3 — Capacity | Room capacity ≥ class size |
-| C4 — Student clash | Courses sharing students cannot overlap |
-| C5 — Lecturer clash | A lecturer cannot teach two courses at the same time |
-| C6 — Period restriction *(optional)* | Some courses may only use certain periods |
+| C1 — Phân công | Mỗi khóa học được lập lịch đúng một lần |
+| C2 — Xung đột phòng | Mỗi (khung giờ, phòng) chỉ có tối đa một khóa học |
+| C3 — Sức chứa | Sức chứa phòng ≥ quy mô lớp học |
+| C4 — Xung đột sinh viên | Các khóa học có chung sinh viên không thể trùng giờ |
+| C5 — Xung đột giảng viên | Một giảng viên không thể dạy hai khóa học cùng lúc |
+| C6 — Hạn chế tiết *(tùy chọn)* | Một số khóa học chỉ được dùng một số tiết nhất định |
 
-**Extension (Part 5):** add a soft penalty for courses scheduled outside their preferred period and tune the penalty weight λ.
+**Mở rộng (Phần 5):** thêm hình phạt mềm cho các khóa học được xếp ngoài tiết ưu tiên và điều chỉnh trọng số hình phạt λ.
 
 ---
 
-## Installation
+## Cài Đặt
 
-Python 3.9+ is recommended. Install all dependencies with:
+Khuyến nghị Python 3.9+. Cài đặt tất cả các phụ thuộc bằng:
 
 ```bash
 pip install pyomo highspy pandas numpy matplotlib seaborn
 ```
 
-| Package | Purpose |
+| Gói | Mục đích |
 |---------|---------|
-| `pyomo` | MILP modelling framework |
-| `highspy` | HiGHS solver (called via `appsi_highs` inside Pyomo) |
-| `pandas` | Data loading and result tables |
-| `numpy` | Numerical utilities |
-| `matplotlib` | Schedule grid and utilisation charts |
-| `seaborn` | Plot styling |
+| `pyomo` | Framework mô hình hóa MILP |
+| `highspy` | Bộ giải HiGHS (gọi qua `appsi_highs` trong Pyomo) |
+| `pandas` | Tải dữ liệu và bảng kết quả |
+| `numpy` | Tiện ích số học |
+| `matplotlib` | Lưới lịch học và biểu đồ mức sử dụng |
+| `seaborn` | Định dạng đồ thị |
 
-### Verify your setup
+### Kiểm Tra Cài Đặt
 
-Run the first two cells of `milp_scheduling_practice.ipynb`. You should see:
+Chạy hai ô đầu tiên của `milp_scheduling_practice.ipynb`. Bạn sẽ thấy:
 
 ```
-Pyomo ready.
-Data loaded.
+Pyomo sẵn sàng.
+Dữ liệu đã tải.
   courses      (10, 6)
   rooms        (5, 4)
   timeslots    (15, 5)
@@ -116,10 +116,10 @@ Data loaded.
 
 ---
 
-## How to work through the notebook
+## Hướng Dẫn Làm Notebook
 
-1. Read each `## Part N` heading and the mathematical formulation in the markdown cell above it.
-2. Complete every cell marked **`# TODO`** — the hint and Pyomo pattern are included as comments.
-3. Run Part 4 to solve and check your result (optimal cost should be **30**).
-4. Complete Part 5 (soft constraints) and experiment with different values of λ.
-5. Complete Part 6 Step 1 to generate the visualisations.
+1. Đọc từng tiêu đề `## Phần N` và công thức toán học trong ô markdown phía trên.
+2. Hoàn thành mọi ô có đánh dấu **`# TODO`** — gợi ý và mẫu Pyomo đã được cung cấp dưới dạng chú thích.
+3. Chạy Phần 4 để giải và kiểm tra kết quả (chi phí tối ưu phải là **30**).
+4. Hoàn thành Phần 5 (ràng buộc mềm) và thử nghiệm với các giá trị λ khác nhau.
+5. Hoàn thành Phần 6 Bước 1 để tạo các biểu đồ trực quan.
